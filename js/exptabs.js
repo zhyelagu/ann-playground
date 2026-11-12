@@ -11,6 +11,8 @@
   const $ = id => document.getElementById(id);
   const P = Viz.palette;
   const pct = v => (v * 100).toFixed(1) + '%';
+  // Activation 탭 그래프들은 전체 폭이라 세로 비율을 낮춘다
+  const ACT_BIG_ASPECT = 0.3;
   const ex  = v => (v > 0 ? v.toExponential(2) : '—');
 
   /** 결과 저장 — 탭을 다시 열 때 캔버스를 다시 그려야 한다
@@ -360,13 +362,13 @@
     if (!app || !app.net) return;
     const net = app.net, d = app.data;
     if (net.epoch === 0) {
-      Viz.activations($('cvActsBig'), null);
+      Viz.activations($('cvActsBig'), null, ACT_BIG_ASPECT);
       $('actTable').innerHTML = '<p class="hint">먼저 실험하기 탭에서 학습을 실행하세요.</p>';
       $('actHint').textContent = '';
       return;
     }
     const stats = net.activationStats(d.Xtrain);
-    Viz.activations($('cvActsBig'), stats);
+    Viz.activations($('cvActsBig'), stats, ACT_BIG_ASPECT);
     $('actHint').textContent = `${net.activation} · ${net.layerSizes.join('-')} · epoch ${net.epoch}`;
 
     $('actTable').innerHTML = table(
@@ -415,7 +417,7 @@
         values: cats.map((_, k) => p.dead[k] ?? null),
         color: p.cfg.activation === 'tanh' ? '#16a34a' : ['#93c5fd','#60a5fa','#f59e0b','#dc2626'][i] || '#2563eb'
       })),
-      { yLabel: '죽은 뉴런 비율', yMax: 1 });
+      { yLabel: '죽은 뉴런 비율', yMax: 1, aspect: ACT_BIG_ASPECT });
 
     $('e4Table').innerHTML = table(
       prof.map(p => {

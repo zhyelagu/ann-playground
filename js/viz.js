@@ -224,7 +224,7 @@
 
     const isLoss = mode === 'loss';
     const ys = isLoss ? logRange(series) : { min: 0, max: 1 };
-    const A = axes(ctx, w, h, { l:46, r:12, t:10, b:26 },
+    const A = axes(ctx, w, h, { l:46, r:12, t:22, b:26 },
       { min:0, max:xmax }, ys,
       { logY:isLoss, yCount:5, xCount:5,
         xLabel:'Epoch', yLabel:isLoss ? 'Loss' : 'Accuracy' });
@@ -244,7 +244,7 @@
     ctx.fillStyle = C.blue; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
     ctx.font = 'bold 11px system-ui';
     const last = series[n - 1];
-    ctx.fillText(isLoss ? last.toFixed(4) : (last * 100).toFixed(1) + '%', A.R - 2, A.T + 12);
+    ctx.fillText(isLoss ? last.toFixed(4) : (last * 100).toFixed(1) + '%', A.R, A.T - 5);
     ctx.font = '10px system-ui';
   }
 
@@ -257,7 +257,9 @@
 
     const all = [...gA, ...(gB || [])].filter(v => v > 0);
     const ys = logRange(all.length ? all : [1e-6, 1]);
-    const A = axes(ctx, w, h, { l:52, r:12, t:10, b:30 },
+    const items = [[C.blue, labelA], gB ? [C.orange, labelB] : null].filter(Boolean);
+    const lg = reserveLegend(ctx, w, { l:52, r:12, t:10, b:30 }, items);
+    const A = axes(ctx, w, h, lg.box,
       { min:0, max:names.length, ticks:false }, ys,
       { logY:true, yLabel:'Mean |Gradient|' });
 
@@ -278,7 +280,7 @@
       ctx.fillStyle = C.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
       ctx.fillText(names[i], cx, A.B + 6);
     }
-    legend(ctx, A.L + 4, A.T + 2, [[C.blue, labelA], gB ? [C.orange, labelB] : null].filter(Boolean));
+    legend(ctx, A.L, lg.rows);
   }
 
   /* =========================================================
@@ -294,7 +296,9 @@
     const ys = logRange(flat);
     const xmax = Math.max(totalEpochs || 0, G.length, 10);
 
-    const A = axes(ctx, w, h, { l:52, r:12, t:10, b:26 },
+    const lg = reserveLegend(ctx, w, { l:52, r:12, t:10, b:26 },
+      names.map((n, i) => [C.layer[i % C.layer.length], n]), true);
+    const A = axes(ctx, w, h, lg.box,
       { min:0, max:xmax }, ys,
       { logY:true, xCount:5, xLabel:'Epoch', yLabel:'Mean |Gradient|' });
 
@@ -312,8 +316,7 @@
       }
       ctx.stroke();
     }
-    legend(ctx, A.L + 4, A.T + 2,
-      names.map((n, i) => [C.layer[i % C.layer.length], n]), true);
+    legend(ctx, A.L, lg.rows);
   }
 
   /* =========================================================
@@ -372,14 +375,14 @@
   /* =========================================================
      7. Activation 분포 — 층마다 작은 히스토그램
      ========================================================= */
-  function activations(cv, stats) {
-    const S = setup(cv, 0.52); if (!S) return; const { ctx, w, h } = S;
+  function activations(cv, stats, aspect = 0.52) {
+    const S = setup(cv, aspect); if (!S) return; const { ctx, w, h } = S;
     if (!stats || !stats.length) { empty(ctx, w, h, '학습을 시작하면 표시됩니다'); return; }
 
     const n = stats.length;
     const gap = 10;
     const cw = (w - gap * (n + 1)) / n;
-    const top = 22, bot = 26;
+    const top = 34, bot = 26;
 
     for (let i = 0; i < n; i++) {
       const x0 = gap + i * (cw + gap);
@@ -406,12 +409,12 @@
 
       ctx.fillStyle = C.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
       ctx.font = '10.5px system-ui';
-      ctx.fillText(s.isOutput ? 'Output' : `Layer ${s.layer}`, x0 + cw / 2, top - 10);
+      ctx.fillText(s.isOutput ? 'Output' : `Layer ${s.layer}`, x0 + cw / 2, top - 16);
       ctx.font = '9.5px system-ui'; ctx.fillStyle = C.text;
-      ctx.fillText(`μ=${s.mean.toFixed(2)} σ=${s.std.toFixed(2)}`, x0 + cw / 2, top - 1);
+      ctx.fillText(`μ=${s.mean.toFixed(2)} σ=${s.std.toFixed(2)}`, x0 + cw / 2, top - 4);
       ctx.textBaseline = 'top';
-      ctx.fillText(nice(lo), x0, top + H + 4);
-      ctx.fillText(nice(hi), x0 + cw, top + H + 4);
+      ctx.textAlign = 'left';  ctx.fillText(nice(lo), x0, top + H + 4);
+      ctx.textAlign = 'right'; ctx.fillText(nice(hi), x0 + cw, top + H + 4);
       ctx.font = '10px system-ui';
     }
     ctx.fillStyle = C.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
@@ -434,7 +437,9 @@
                     : { min: Math.min(0, ...flat), max: Math.max(1, ...flat) };
     const xmax = Math.max(opts.xmax || 0, ...valid.map(s => s.values.length), 10);
 
-    const A = axes(ctx, w, h, { l:52, r:12, t:10, b:26 },
+    const lg = reserveLegend(ctx, w, { l:52, r:12, t:10, b:26 },
+      valid.map((s, i) => [s.color || C.layer[i % C.layer.length], s.label]), true);
+    const A = axes(ctx, w, h, lg.box,
       { min:0, max:xmax }, ys,
       { logY, xCount:5, yCount:5, xLabel:'Epoch', yLabel:opts.yLabel || 'Loss' });
 
@@ -453,8 +458,7 @@
       ctx.stroke();
     });
 
-    legend(ctx, A.L + 4, A.T + 1,
-      valid.map((s, i) => [s.color || C.layer[i % C.layer.length], s.label]), true);
+    legend(ctx, A.L, lg.rows);
   }
 
   /* =========================================================
@@ -474,7 +478,9 @@
 
     // x = 출력층으로부터의 거리. 축을 뒤집어 출력층(0)을 오른쪽에 둔다.
     // 깊이가 다른 모델도 출력층이 한 점에 모여 비교가 맞아떨어진다.
-    const A = axes(ctx, w, h, { l:52, r:12, t:10, b:30 },
+    const lg = reserveLegend(ctx, w, { l:52, r:12, t:10, b:30 },
+      valid.map(s => [s.color, s.label]), true);
+    const A = axes(ctx, w, h, lg.box,
       { min: far, max: 0, values: Array.from({ length: maxLen }, (_, i) => far - i) },
       ys, { logY:true, yLabel:'Mean |Gradient|' });
 
@@ -498,7 +504,7 @@
       });
     });
 
-    legend(ctx, A.L + 4, A.T + 1, valid.map(s => [s.color, s.label]), true);
+    legend(ctx, A.L, lg.rows);
   }
 
   /* =========================================================
@@ -510,7 +516,9 @@
     const { ctx, w, h } = S;
     if (!groups.length) { empty(ctx, w, h, '실행하면 표시됩니다'); return; }
 
-    const A = axes(ctx, w, h, { l:48, r:12, t:10, b:30 },
+    const lg = reserveLegend(ctx, w, { l:48, r:12, t:10, b:30 },
+      groups.map((g, k) => [g.color || C.layer[k % C.layer.length], g.label]), true);
+    const A = axes(ctx, w, h, lg.box,
       { min:0, max:categories.length, ticks:false },
       { min:0, max:opts.yMax || 1 },
       { yCount:5, yLabel:opts.yLabel || '' });
@@ -537,20 +545,41 @@
       ctx.fillStyle = C.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
       ctx.fillText(cat, cx, A.B + 6);
     });
-    legend(ctx, A.L + 4, A.T + 1,
-      groups.map((g, k) => [g.color || C.layer[k % C.layer.length], g.label]), true);
+    legend(ctx, A.L, lg.rows);
   }
 
   /* ---------- 공통 보조 ---------- */
-  function legend(ctx, x, y, items, compact) {
+  /* 범례는 그래프 영역 위에 줄을 따로 잡아 그린다.
+     안쪽에 그리면 위쪽에 붙는 선(발산한 Loss, 100% Accuracy 등)과 겹친다.
+     폭이 모자라면 줄을 바꾼다. */
+  const LEG_ROW = 14;
+  function legendRows(ctx, items, maxW, compact) {
+    ctx.font = '10px system-ui';
+    const rows = [[]];
+    let cx = 0;
+    for (const [color, label] of items) {
+      const iw = 11 + ctx.measureText(label).width;
+      if (cx > 0 && cx + iw > maxW) { rows.push([]); cx = 0; }
+      rows[rows.length - 1].push({ color, label, x: cx });
+      cx += iw + (compact ? 9 : 14);
+    }
+    return rows;
+  }
+  // 범례 줄 수만큼 위 여백을 늘린 box 와 줄 배치를 돌려준다
+  function reserveLegend(ctx, w, box, items, compact) {
+    const rows = legendRows(ctx, items, w - box.l - box.r, compact);
+    return { box: { ...box, t: box.t + rows.length * LEG_ROW }, rows };
+  }
+  function legend(ctx, x, rows) {
     ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     ctx.font = '10px system-ui';
-    let cx = x;
-    for (const [color, label] of items) {
-      ctx.fillStyle = color; ctx.fillRect(cx, y + 2, 8, 8);
-      ctx.fillStyle = C.ink; ctx.fillText(label, cx + 11, y + 1);
-      cx += 11 + ctx.measureText(label).width + (compact ? 9 : 14);
-    }
+    rows.forEach((row, r) => {
+      const y = 2 + r * LEG_ROW;
+      for (const it of row) {
+        ctx.fillStyle = it.color; ctx.fillRect(x + it.x, y + 2, 8, 8);
+        ctx.fillStyle = C.ink; ctx.fillText(it.label, x + it.x + 11, y + 1);
+      }
+    });
   }
 
   function empty(ctx, w, h, msg) {

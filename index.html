@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- 수정 후 옛 화면이 남지 않도록. JS는 아래 ?v= 로 따로 관리한다 -->
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<title>ANN Playground</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle cx='11' cy='14' r='5' fill='%233b82f6'/%3E%3Ccircle cx='11' cy='34' r='5' fill='%233b82f6'/%3E%3Ccircle cx='24' cy='24' r='5' fill='%23f59e0b'/%3E%3Ccircle cx='37' cy='24' r='5' fill='%2322c55e'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#f1f5f9; --card:#fff; --line:#e2e8f0; --line2:#cbd5e1;
+    --ink:#0f172a; --muted:#64748b; --faint:#94a3b8;
+    --blue:#2563eb; --blue-l:#dbeafe; --orange:#f59e0b;
+    --c0:#3b82f6; --c1:#ef4444;
+    --radius:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--bg); color:var(--ink);
+    font:14px/1.5 "Pretendard","Malgun Gothic",-apple-system,"Segoe UI",sans-serif;
+  }
+
+  /* ---------- 푸터 ---------- */
+  footer.credit{
+    margin:28px 0 0; padding:16px 20px 24px;
+    border-top:1px solid var(--line);
+    color:var(--faint); font-size:12px; line-height:1.8; text-align:center;
+  }
+  footer.credit b{color:var(--muted)}
+
+  /* ---------- 헤더 ---------- */
+  header{
+    background:var(--card); border-bottom:1px solid var(--line);
+    display:flex; align-items:center; gap:24px; padding:12px 20px;
+    position:sticky; top:0; z-index:10;
+  }
+  .brand{display:flex; align-items:center; gap:12px}
+  .brand svg{width:40px;height:40px;flex:none}
+  .brand h1{margin:0;font-size:19px;letter-spacing:-.02em}
+  .brand p{margin:0;font-size:11.5px;color:var(--muted)}
+  nav{display:flex; gap:4px; margin-left:auto; flex-wrap:wrap}
+  nav button{
+    border:0;background:transparent;color:var(--muted);
+    padding:7px 14px;border-radius:7px;cursor:pointer;font-size:13px;
+    font-family:inherit;
+  }
+  nav button:hover{background:var(--bg)}
+  nav button.on{background:var(--blue); color:#fff}
+
+  /* ---------- 레이아웃 ---------- */
+  .wrap{display:flex; align-items:flex-start; gap:16px; padding:16px; max-width:1680px; margin:0 auto}
+  aside{
+    width:272px; flex:none; position:sticky; top:81px;
+    background:var(--card); border:1px solid var(--line);
+    border-radius:var(--radius); padding:16px;
+  }
+  main{flex:1; min-width:0}
+
+  /* ---------- 컨트롤 ---------- */
+  .group{margin-bottom:20px}
+  .group:last-child{margin-bottom:0}
+  .group > h3{
+    margin:0 0 10px; font-size:13px; font-weight:700;
+  }
+  .field{margin-bottom:11px}
+  .field:last-child{margin-bottom:0}
+  .field label{display:block; font-size:12px; color:var(--muted); margin-bottom:4px}
+  .row{display:flex; justify-content:space-between; align-items:baseline}
+  .row b{font-size:13px; font-variant-numeric:tabular-nums}
+  select,input[type=number]{
+    width:100%; padding:6px 8px; border:1px solid var(--line2);
+    border-radius:6px; font:inherit; font-size:13px; background:#fff; color:inherit;
+  }
+  input[type=range]{width:100%; accent-color:var(--blue); margin:3px 0}
+  .scale{display:flex;justify-content:space-between;font-size:10.5px;color:var(--faint)}
+
+  .thumbs{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:8px}
+  .thumb{
+    border:2px solid var(--line); border-radius:7px; padding:4px 2px 3px;
+    background:#fff; cursor:pointer; text-align:center;
+  }
+  .thumb:hover{border-color:var(--line2)}
+  .thumb.on{border-color:var(--blue); background:var(--blue-l)}
+  .thumb canvas{display:block; width:100%; height:38px}
+  .thumb span{font-size:10px; color:var(--muted)}
+
+  .radios{display:flex; flex-direction:column; gap:6px}
+  .radios label{
+    display:flex; align-items:center; gap:7px; font-size:13px;
+    color:var(--ink); cursor:pointer; margin:0;
+  }
+  .radios input{accent-color:var(--blue); margin:0}
+
+  .btns{margin-top:16px; display:flex; flex-direction:column; gap:7px}
+  button.act{
+    width:100%; padding:9px; border-radius:7px; border:1px solid var(--line2);
+    background:#fff; color:var(--ink); font:inherit; font-size:13px; cursor:pointer;
+  }
+  button.act:hover{background:var(--bg)}
+  button.act.primary{background:var(--blue); border-color:var(--blue); color:#fff; font-weight:600}
+  button.act.primary:hover{filter:brightness(1.07)}
+  .btns .pair{display:flex; gap:7px}
+  .btns .pair button{flex:1}
+
+  /* ---------- 패널 ---------- */
+  .grid{display:grid; gap:14px}
+  .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  /* 프로젝터(1024~1280)에서 1단으로 떨어지면 스크롤이 너무 길어진다 */
+  @media (max-width:1240px){ .g3{grid-template-columns:repeat(2,minmax(0,1fr))} }
+  @media (max-width:900px){ .g3,.g2{grid-template-columns:1fr} }
+  .panel{
+    background:var(--card); border:1px solid var(--line);
+    border-radius:var(--radius); padding:13px 15px 15px;
+  }
+  .panel header{
+    all:unset; display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:10px;
+  }
+  .panel h2{margin:0; font-size:13.5px; font-weight:700}
+  .panel .hint{font-size:11px; color:var(--faint)}
+  .ph{
+    height:180px; display:flex; align-items:center; justify-content:center;
+    color:var(--faint); font-size:12px;
+    border:1px dashed var(--line2); border-radius:8px; background:#fafbfc;
+  }
+
+  /* ---------- 상태 표시줄 ---------- */
+  .stats{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr));
+    gap:10px; margin-bottom:14px;
+  }
+  .stat{
+    background:var(--card); border:1px solid var(--line);
+    border-radius:var(--radius); padding:10px 13px;
+  }
+  .stat .k{font-size:11px; color:var(--muted)}
+  .stat .k .src{color:var(--faint); font-size:10px}
+  .stat .v{font-size:19px; font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:-.02em;
+           overflow-wrap:anywhere}
+  .stat .v.small{font-size:14px; line-height:1.35}
+
+  .tabpage{display:none}
+  .tabpage.on{display:block}
+  canvas.plot{display:block; width:100%; background:#fff}
+  .legend{display:flex; gap:12px; align-items:center; font-size:11px; color:var(--muted)}
+  .legend i{width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:4px}
+
+  .toggle{display:inline-flex; border:1px solid var(--line2); border-radius:6px; overflow:hidden}
+  .toggle button{
+    border:0; background:#fff; color:var(--muted); font:inherit; font-size:11.5px;
+    padding:4px 11px; cursor:pointer;
+  }
+  .toggle button + button{border-left:1px solid var(--line2)}
+  .toggle button.on{background:var(--blue); color:#fff}
+  details.panel summary::-webkit-details-marker{color:var(--faint)}
+
+  /* ---------- 실험 탭 ---------- */
+  .panel.exp h2{margin:0 0 5px; font-size:16px}
+  .panel.exp p{margin:0 0 12px; color:var(--muted); font-size:12.5px}
+  .expbar{display:flex; flex-wrap:wrap; align-items:center; gap:10px}
+  .expbar label{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted)}
+  .expbar input[type=number]{width:78px}
+  .expbar select{width:auto; min-width:120px}
+  .expbar button.act{width:auto; padding:7px 18px}
+  .prog{flex:1; min-width:90px; height:5px; background:var(--line); border-radius:3px; overflow:hidden}
+  .prog > span{display:block; height:100%; width:0; background:var(--blue); transition:width .15s}
+
+  table.res{width:100%; border-collapse:collapse; font-size:12.5px}
+  table.res th,table.res td{padding:6px 9px; text-align:right; border-bottom:1px solid var(--line)}
+  table.res th:first-child,table.res td:first-child{text-align:left}
+  table.res th{color:var(--muted); font-weight:600; font-size:11.5px}
+  table.res td{font-variant-numeric:tabular-nums}
+  table.res tr:last-child td{border-bottom:0}
+  table.res .sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+  table.res .good{color:#16a34a; font-weight:600}
+  table.res .bad{color:#dc2626; font-weight:600}
+
+  .concl{font-size:13px; line-height:1.7}
+  .concl h3{margin:0 0 8px; font-size:13.5px}
+  .concl ul{margin:0; padding-left:18px}
+  .concl li{margin-bottom:5px}
+  .concl b{color:var(--ink)}
+  .concl:empty{display:none}
+
+  .helpdoc h3{margin:0 0 10px; font-size:14px}
+  .helpdoc dl{margin:0; font-size:12.5px}
+  .helpdoc dt{font-weight:700; margin-top:9px}
+  .helpdoc dt:first-child{margin-top:0}
+  .helpdoc dd{margin:2px 0 0; color:var(--muted); line-height:1.6}
+  .helpdoc code{background:var(--bg); padding:1px 5px; border-radius:4px; font-size:11.5px}
+
+  .minicard{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:10px}
+  .chk{display:flex; align-items:center; gap:7px; font-size:12px; color:var(--muted);
+       margin-top:11px; cursor:pointer}
+  .chk input{accent-color:var(--blue); margin:0}
+  .warn{margin:8px 0 0; font-size:11.5px; line-height:1.5; color:#b45309;
+        background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:7px 9px}
+  .warn:empty{display:none}
+  .note{margin:9px 0 0; font-size:11px; line-height:1.55; color:var(--muted);
+        background:var(--bg); border-radius:6px; padding:7px 9px}
+  .note:empty{display:none}
+
+  button.mini{border:1px solid var(--line2); background:#fff; color:var(--muted);
+    font:inherit; font-size:10.5px; padding:2px 7px; border-radius:5px; cursor:pointer; margin-left:6px}
+  button.mini:hover{background:var(--bg); color:var(--ink)}
+
+  .minicard h4{margin:0 0 2px; font-size:12.5px}
+  .minicard .sub{font-size:11px; color:var(--muted); margin-bottom:6px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <svg viewBox="0 0 48 48" aria-hidden="true">
+      <g fill="none" stroke="#94a3b8" stroke-width="1.1">
+        <path d="M11 14 L24 10 M11 14 L24 24 M11 14 L24 38 M11 34 L24 10 M11 34 L24 24 M11 34 L24 38
+                 M24 10 L37 24 M24 24 L37 24 M24 38 L37 24"/>
+      </g>
+      <circle cx="11" cy="14" r="4" fill="#3b82f6"/><circle cx="11" cy="34" r="4" fill="#3b82f6"/>
+      <circle cx="24" cy="10" r="4" fill="#f59e0b"/><circle cx="24" cy="24" r="4" fill="#f59e0b"/>
+      <circle cx="24" cy="38" r="4" fill="#f59e0b"/>
+      <circle cx="37" cy="24" r="4" fill="#22c55e"/>
+    </svg>
+    <div>
+      <h1>ANN Playground</h1>
+      <p>Interactive Neural Network Simulator</p>
+    </div>
+  </div>
+  <nav id="nav">
+    <button data-tab="play" class="on">실험하기</button>
+    <button data-tab="arch">모델 구조</button>
+    <button data-tab="train">학습 과정</button>
+    <button data-tab="grad">Gradient 분석</button>
+    <button data-tab="act">Activation 분석</button>
+    <button data-tab="help">도움말</button>
+  </nav>
+</header>
+
+<div class="wrap">
+
+  <!-- ===================== 컨트롤 ===================== -->
+  <aside>
+    <div class="group">
+      <h3>1. 데이터셋 선택</h3>
+      <select id="dataset"></select>
+      <div class="thumbs" id="thumbs"></div>
+      <div class="field" style="margin-top:10px">
+        <div class="row"><label style="margin:0">샘플 수</label><b id="nSamplesV">300</b></div>
+        <input type="range" id="nSamples" min="100" max="800" step="50" value="300">
+      </div>
+      <div class="field">
+        <div class="row"><label style="margin:0">노이즈</label><b id="noiseV">0.00</b></div>
+        <input type="range" id="noise" min="0" max="0.5" step="0.05" value="0">
+      </div>
+      <p class="note" id="realNote"></p>
+    </div>
+
+    <div class="group">
+      <h3>2. 모델 구조</h3>
+      <div class="field">
+        <div class="row"><label style="margin:0">Hidden layer 수</label><b id="hiddenV">3</b></div>
+        <input type="range" id="hidden" min="0" max="6" step="1" value="3">
+        <div class="scale"><span>0</span><span>6</span></div>
+      </div>
+      <div class="field">
+        <div class="row"><label style="margin:0">Neurons per layer</label><b id="neuronsV">8</b></div>
+        <input type="range" id="neurons" min="1" max="32" step="1" value="8">
+        <div class="scale"><span>1</span><span>32</span></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>3. 활성화 함수</h3>
+      <div class="radios">
+        <label><input type="radio" name="act" value="sigmoid" checked> Sigmoid</label>
+        <label><input type="radio" name="act" value="tanh"> Tanh</label>
+        <label><input type="radio" name="act" value="relu"> ReLU</label>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>4. 학습 파라미터</h3>
+      <div class="field">
+        <label for="lr">Learning rate</label>
+        <input type="number" id="lr" value="0.1" step="0.01" min="0.0001">
+      </div>
+      <div class="field">
+        <label for="batch">Batch size</label>
+        <select id="batch">
+          <option value="1">1 (Stochastic)</option>
+          <option value="16" selected>16 (Mini-batch)</option>
+          <option value="32">32 (Mini-batch)</option>
+          <option value="64">64 (Mini-batch)</option>
+          <option value="0">전체 (Full-batch)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="epochs">Epoch</label>
+        <input type="number" id="epochs" value="1000" step="100" min="1">
+      </div>
+      <label class="chk" title="끄면 학습 속도가 약 2배 빨라집니다">
+        <input type="checkbox" id="cmpOn" checked>
+        비교 모델 동시 학습
+      </label>
+      <p class="warn" id="costWarn"></p>
+    </div>
+
+    <div class="btns">
+      <button class="act primary" id="btnRun">▶ 학습 시작</button>
+      <div class="pair">
+        <button class="act" id="btnPause">⏸ 일시정지</button>
+        <button class="act" id="btnReset">↻ 초기화</button>
+      </div>
+      <button class="act" id="btnShare" title="현재 설정이 담긴 주소를 복사합니다">🔗 설정 링크 복사</button>
+    </div>
+  </aside>
+
+  <!-- ===================== 본문 ===================== -->
+  <main>
+    <div class="stats">
+      <div class="stat"><div class="k">Epoch <span class="src">· 실험하기 탭 모델</span></div><div class="v" id="sEpoch">0</div></div>
+      <div class="stat"><div class="k">Loss</div><div class="v" id="sLoss">—</div></div>
+      <div class="stat"><div class="k">Train Acc</div><div class="v" id="sAcc">—</div></div>
+      <div class="stat"><div class="k">Test Acc</div><div class="v" id="sTest">—</div></div>
+      <div class="stat"><div class="k">상태</div><div class="v small" id="sState">대기</div></div>
+    </div>
+
+    <!-- 실험하기 -->
+    <section class="tabpage on" data-tab="play">
+      <div class="grid g3">
+        <div class="panel">
+          <header><h2>데이터 분포</h2>
+            <span class="legend"><i style="background:var(--c0)"></i>Class 0 <i style="background:var(--c1);margin-left:8px"></i>Class 1</span>
+          </header>
+          <canvas class="plot" id="cvData" width="520" height="440"></canvas>
+        </div>
+        <div class="panel">
+          <header><h2>결정 경계 (Decision Boundary)</h2></header>
+          <canvas class="plot" id="cvBoundary" width="520" height="440"></canvas>
+        </div>
+        <div class="panel">
+          <header><h2>신경망 구조</h2><span class="hint" id="archHint"></span></header>
+          <canvas class="plot" id="cvNetwork" width="520" height="440"></canvas>
+        </div>
+      </div>
+
+      <div class="grid g2" style="margin-top:14px">
+        <div class="panel">
+          <header><h2>학습 곡선</h2>
+            <span class="toggle" id="curveToggle">
+              <button class="on" data-mode="loss">Loss</button><button data-mode="accuracy">Accuracy</button>
+            </span>
+          </header>
+          <canvas class="plot" id="cvCurve" width="520" height="280"></canvas>
+        </div>
+        <div class="panel">
+          <header><h2>Layer별 Gradient Magnitude</h2><span class="hint">현재 epoch · 로그 스케일</span></header>
+          <canvas class="plot" id="cvGradBars" width="520" height="280"></canvas>
+        </div>
+      </div>
+
+      <div class="grid g2" style="margin-top:14px">
+        <div class="panel">
+          <header><h2>Layer별 Gradient 변화 (학습 과정)</h2><span class="hint">로그 스케일</span></header>
+          <canvas class="plot" id="cvGradLines" width="520" height="280"></canvas>
+        </div>
+        <div class="panel">
+          <header><h2>Activation 분포 (현재 epoch)</h2></header>
+          <canvas class="plot" id="cvActs" width="520" height="280"></canvas>
+        </div>
+      </div>
+
+      <details class="panel" style="margin-top:14px">
+        <summary style="cursor:pointer;font-size:13.5px;font-weight:700">수치 보기 (층별 평균 |dW|)</summary>
+        <pre id="debug" style="margin:10px 0 0;font:12px/1.6 ui-monospace,Consolas,monospace;color:var(--muted);white-space:pre-wrap">학습을 시작하면 표시됩니다.</pre>
+      </details>
+    </section>
+
+    <!-- ========== Experiment 1 ========== -->
+    <section class="tabpage" data-tab="arch">
+      <div class="panel exp">
+        <h2>Experiment 1 — Why Do We Need Hidden Layers?</h2>
+        <p>Single Perceptron(은닉층 0개)과 MLP를 <b>같은 데이터·같은 초기화 시드</b>로 학습시켜
+           XOR 분류 성능을 비교합니다.</p>
+        <div class="expbar">
+          <label>데이터 <select id="e1Data"></select></label>
+          <label>Neurons <input type="number" id="e1Neurons" value="8" min="1" max="32"></label>
+          <label>Epoch <input type="number" id="e1Epochs" value="500" step="100" min="50"></label>
+          <button class="act primary" id="e1Run">실행</button>
+          <span class="prog"><span id="e1Bar"></span></span>
+          <span class="hint" id="e1Stat"></span>
+        </div>
+      </div>
+      <div class="grid g3" id="e1Cards" style="margin-top:14px"></div>
+      <div class="grid g2" style="margin-top:14px">
+        <div class="panel"><header><h2>Loss 비교</h2><span class="hint">로그 스케일 <button class="mini" data-export="png:e1Curve">PNG</button></span></header>
+          <canvas class="plot" id="e1Curve"></canvas></div>
+        <div class="panel"><header><h2>결과</h2><button class="mini" data-export="csv:e1Table">CSV</button></header><div id="e1Table"></div></div>
+      </div>
+      <div class="panel concl" id="e1Concl" style="margin-top:14px"></div>
+    </section>
+
+    <!-- ========== Experiment 2 ========== -->
+    <section class="tabpage" data-tab="train">
+      <div class="panel exp">
+        <h2>Experiment 2 — Effect of Learning Rate</h2>
+        <p>구조·데이터·초기화를 고정하고 <b>Learning Rate만</b> 바꿔
+           Loss 변화와 수렴 특성을 비교합니다.</p>
+        <div class="expbar">
+          <label>데이터 <select id="e2Data"></select></label>
+          <label>Hidden <input type="number" id="e2Hidden" value="2" min="1" max="6"></label>
+          <label>활성화
+            <select id="e2Act"><option value="tanh">Tanh</option><option value="sigmoid">Sigmoid</option><option value="relu">ReLU</option></select>
+          </label>
+          <label>Epoch <input type="number" id="e2Epochs" value="500" step="100" min="50"></label>
+          <button class="act primary" id="e2Run">실행</button>
+          <span class="prog"><span id="e2Bar"></span></span>
+          <span class="hint" id="e2Stat"></span>
+        </div>
+      </div>
+      <div class="grid g2" style="margin-top:14px">
+        <div class="panel"><header><h2>Learning Rate별 Loss</h2><span class="hint">로그 스케일 <button class="mini" data-export="png:e2Curve">PNG</button></span></header>
+          <canvas class="plot" id="e2Curve"></canvas></div>
+        <div class="panel"><header><h2>Accuracy 변화</h2></header>
+          <canvas class="plot" id="e2Acc"></canvas></div>
+      </div>
+      <div class="panel" style="margin-top:14px"><header><h2>결정 경계</h2></header>
+        <div class="grid" id="e2Cards" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))"></div></div>
+      <div class="panel" style="margin-top:14px"><header><h2>수렴 특성</h2><button class="mini" data-export="csv:e2Table">CSV</button></header><div id="e2Table"></div></div>
+      <div class="panel concl" id="e2Concl" style="margin-top:14px"></div>
+    </section>
+
+    <!-- ========== Experiment 3 ========== -->
+    <section class="tabpage" data-tab="grad">
+      <div class="panel exp">
+        <h2>Experiment 3 — Vanishing Gradient</h2>
+        <p>은닉층 수(2·4·6)와 활성화 함수(Sigmoid·ReLU)를 조합해
+           <b>층별 Gradient Magnitude</b>가 어떻게 달라지는지 비교합니다.</p>
+        <div class="expbar">
+          <label>데이터 <select id="e3Data"></select></label>
+          <label>Neurons <input type="number" id="e3Neurons" value="8" min="1" max="32"></label>
+          <label>Learning rate <input type="number" id="e3Lr" value="0.1" step="0.01"></label>
+          <label title="활성화 함수 효과만 분리하려면 '동일', 실무 기준 비교는 '각자 표준'">초기화
+            <select id="e3Init">
+              <option value="xavier">동일 (Xavier)</option>
+              <option value="auto">각자 표준 (Xavier / He)</option>
+            </select>
+          </label>
+          <label>Epoch <input type="number" id="e3Epochs" value="300" step="100" min="50"></label>
+          <button class="act primary" id="e3Run">실행</button>
+          <span class="prog"><span id="e3Bar"></span></span>
+          <span class="hint" id="e3Stat"></span>
+        </div>
+      </div>
+      <div class="grid g2" style="margin-top:14px">
+        <div class="panel"><header><h2>층 위치별 Gradient (학습 종료 시점)</h2><span class="hint">로그 스케일 <button class="mini" data-export="png:e3Profile">PNG</button></span></header>
+          <canvas class="plot" id="e3Profile"></canvas></div>
+        <div class="panel"><header><h2>Loss 비교</h2><span class="hint">로그 스케일</span></header>
+          <canvas class="plot" id="e3Curve"></canvas></div>
+      </div>
+      <div class="panel" style="margin-top:14px"><header><h2>층별 Gradient 상세</h2></header>
+        <div class="grid g3" id="e3Cards"></div></div>
+      <div class="panel" style="margin-top:14px"><header><h2>Vanishing 정도</h2>
+        <span class="hint">출력층 기울기 ÷ 첫 층 기울기 — 클수록 심함 <button class="mini" data-export="csv:e3Table">CSV</button></span></header>
+        <div id="e3Table"></div></div>
+      <div class="panel concl" id="e3Concl" style="margin-top:14px"></div>
+    </section>
+
+    <!-- ========== Activation 분석 ========== -->
+    <section class="tabpage" data-tab="act">
+      <div class="panel exp">
+        <h2>Activation 분석</h2>
+        <p>현재 모델(실험하기 탭 설정)의 층별 활성값 분포입니다.
+           Sigmoid가 0 또는 1 근처에 몰리면 <b>포화(saturation)</b> 상태이고, 이때 기울기가 사라집니다.</p>
+      </div>
+      <div class="panel" style="margin-top:14px"><header><h2>층별 Activation 분포</h2>
+        <span class="hint" id="actHint"></span></header>
+        <canvas class="plot" id="cvActsBig"></canvas></div>
+      <div class="panel" style="margin-top:14px"><header><h2>포화 지표 · 죽은 뉴런</h2>
+        <span class="hint">포화: 0.1 미만 또는 0.9 초과 · 죽은 뉴런: 모든 샘플에서 출력 0</span></header>
+        <div id="actTable"></div></div>
+
+      <div class="panel exp" style="margin-top:14px">
+        <h2>Dying ReLU — ReLU의 반대 문제</h2>
+        <p>Experiment 3에서 ReLU가 Vanishing Gradient를 피하는 것을 봤습니다. 그런데 ReLU에는 반대 문제가 있습니다.
+           입력이 음수면 출력도 기울기도 <b>0</b>이라, 한번 죽은 뉴런은 <b>다시 살아나지 못합니다.</b>
+           학습률을 키워가며 죽은 뉴런이 얼마나 늘어나는지 봅니다.</p>
+        <div class="expbar">
+          <label>데이터 <select id="e4Data"></select></label>
+          <label>Hidden <input type="number" id="e4Hidden" value="4" min="1" max="6"></label>
+          <label>Neurons <input type="number" id="e4Neurons" value="16" min="2" max="32"></label>
+          <label>Epoch <input type="number" id="e4Epochs" value="300" step="100" min="50"></label>
+          <button class="act primary" id="e4Run">실행</button>
+          <span class="prog"><span id="e4Bar"></span></span>
+          <span class="hint" id="e4Stat"></span>
+        </div>
+      </div>
+      <div class="panel" style="margin-top:14px"><header><h2>층별 죽은 뉴런 비율</h2>
+        <span class="hint">ReLU 학습률별 · Tanh 대조군 <button class="mini" data-export="png:e4Chart">PNG</button></span></header>
+        <canvas class="plot" id="e4Chart"></canvas></div>
+      <div class="panel" style="margin-top:14px"><header><h2>결과</h2><button class="mini" data-export="csv:e4Table">CSV</button></header><div id="e4Table"></div></div>
+      <div class="panel concl" id="e4Concl" style="margin-top:14px"></div>
+    </section>
+
+    <!-- ========== 도움말 ========== -->
+    <section class="tabpage" data-tab="help">
+      <div class="panel exp">
+        <h2>도움말</h2>
+        <p>이 시뮬레이터는 외부 라이브러리 없이 순전파·역전파를 직접 구현했습니다.
+           모든 계산은 브라우저에서 실행되며 서버로 데이터를 보내지 않습니다.</p>
+      </div>
+      <div class="grid g2" style="margin-top:14px">
+        <div class="panel helpdoc">
+          <h3>컨트롤</h3>
+          <dl>
+            <dt>데이터셋</dt><dd>Linear·XOR·Circle·Spiral. 아래로 갈수록 어렵습니다.</dd>
+            <dt>Hidden layer 수</dt><dd><b>0이면 Single Perceptron</b>이 되어 직선 경계만 그릴 수 있습니다.</dd>
+            <dt>Neurons per layer</dt><dd>층마다 뉴런 개수. 많을수록 표현력이 커지지만 과적합 위험도 커집니다.</dd>
+            <dt>활성화 함수</dt><dd>Sigmoid·Tanh·ReLU. 출력층은 이진 분류이므로 항상 Sigmoid입니다.</dd>
+            <dt>Learning rate</dt><dd>너무 작으면 느리고, 너무 크면 발산합니다. Experiment 2에서 확인할 수 있습니다.</dd>
+            <dt>Batch size</dt><dd>1이면 확률적 경사하강법, 전체면 배치 경사하강법입니다.</dd>
+          </dl>
+        </div>
+        <div class="panel helpdoc">
+          <h3>그래프 읽는 법</h3>
+          <dl>
+            <dt>결정 경계</dt><dd>색이 모델이 예측한 확률입니다. 파랑 0 ↔ 빨강 1, 흰색이 0.5(경계)입니다.</dd>
+            <dt>학습 곡선</dt><dd>Loss는 Binary Cross-Entropy입니다. <b>로그 스케일</b>이라 작은 변화도 보입니다.</dd>
+            <dt>Layer별 Gradient Magnitude</dt><dd>역전파에서 각 층이 받은 <code>|dW|</code>의 평균입니다.
+              왼쪽이 입력에 가까운 층입니다. 왼쪽으로 갈수록 급격히 작아지면 <b>Vanishing Gradient</b>입니다.</dd>
+            <dt>Gradient 변화</dt><dd>학습이 진행되며 각 층의 기울기가 어떻게 변하는지 봅니다.
+              수렴하면 모든 층이 함께 0으로 가므로, 비교는 <b>학습 초기 구간</b>을 봐야 합니다.</dd>
+            <dt>Activation 분포</dt><dd>값이 양 끝에 몰리면 포화입니다. Sigmoid 도함수는 최대 0.25라
+              층을 지날 때마다 기울기가 최소 4분의 1로 줄어듭니다.</dd>
+          </dl>
+        </div>
+      </div>
+      <div class="panel exp" style="margin-top:14px">
+        <h2>역전파 검증 (지금 실행)</h2>
+        <p>이 시뮬레이터의 역전파가 맞는지 <b>이 자리에서</b> 확인할 수 있습니다.
+           각 가중치를 아주 조금(±10⁻⁵) 흔들어 손실이 실제로 얼마나 변하는지 재고,
+           역전파가 계산한 기울기와 비교합니다. 둘이 일치하면 구현이 맞습니다.</p>
+        <div class="expbar">
+          <button class="act primary" id="gcRun">검증 실행</button>
+          <span class="hint" id="gcStat"></span>
+        </div>
+        <div id="gcTable" style="margin-top:12px"></div>
+      </div>
+
+      <div class="panel helpdoc" style="margin-top:14px">
+        <h3>구현 메모</h3>
+        <dl>
+          <dt>검증</dt><dd>역전파가 맞는지 <b>수치적 gradient check</b>로 확인했습니다
+            (<code>test/gradcheck.js</code>, 상대오차 10⁻⁷ 수준).</dd>
+          <dt>재현성</dt><dd>데이터와 가중치 초기화에 고정 시드를 써서 같은 설정이면 항상 같은 결과가 나옵니다.</dd>
+          <dt>비교의 공정성</dt><dd>Sigmoid와 ReLU를 비교할 때 같은 데이터·같은 시드·같은 학습률을 사용합니다.
+            가중치 초기화는 <b>Gradient 분석</b> 탭에서 고를 수 있습니다 —
+            <b>동일(Xavier)</b>은 활성화 함수 효과만 분리하는 통제 비교,
+            <b>각자 표준(Xavier/He)</b>은 실무에서 쓰는 방식대로의 비교입니다.</dd>
+          <dt>성능</dt><dd>계산은 <code>setTimeout</code>으로, 렌더링은 주기적으로 분리했습니다.
+            <code>requestAnimationFrame</code>에 묶으면 창이 가려졌을 때 학습이 멈춥니다.</dd>
+        </dl>
+      </div>
+    </section>
+  </main>
+</div>
+
+<footer class="credit">
+  <div>
+    <b>의료인공지능</b> 과제 2 — Build Your Own ANN Playground ·
+    차의과학대학교 · 담당 조백환 교수
+  </div>
+  <div>
+    박지혜 (20269408) · 외부 라이브러리 없이 순전파·역전파 직접 구현 ·
+    데이터 출처: Breast Cancer Wisconsin (Diagnostic), UCI ML Repository
+  </div>
+</footer>
+
+<!-- ?v= 는 캐시 무력화용. 파일을 고치면 숫자를 올린다
+     (브라우저가 옛 JS를 계속 쓰는 것을 막는다) -->
+<script src="js/rng.js?v=19"></script>
+<script src="js/medical.js?v=19"></script>
+<script src="js/data.js?v=19"></script>
+<script src="js/nn.js?v=19"></script>
+<script src="js/viz.js?v=19"></script>
+<script src="js/experiments.js?v=19"></script>
+<script src="js/app.js?v=19"></script>
+<script src="js/exptabs.js?v=19"></script>
+</body>
+</html>
